@@ -119,10 +119,6 @@
   .lang-dot.typescript { background: #3178c6; }
   .lang-dot.default { background: var(--muted); }
 
-  .custom-card {
-    position: relative;
-  }
-
   .delete-btn {
     position: absolute;
     top: 8px;
@@ -131,16 +127,18 @@
     border: none;
     color: var(--muted);
     cursor: pointer;
-    font-size: 1rem;
+    font-size: 0.85rem;
     opacity: 0;
     transition: opacity 0.2s;
     z-index: 2;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 2px 6px;
+    border-radius: 4px;
   }
 
-  .custom-card:hover .delete-btn { opacity: 1; }
-  .delete-btn:hover { color: #f85149; }
+  .card:hover .delete-btn { opacity: 1; }
+  .delete-btn:hover { color: #f85149; background: rgba(248, 81, 73, 0.1); }
 
-  /* Add card */
   .add-card {
     border: 2px dashed var(--add-border);
     background: transparent;
@@ -167,84 +165,44 @@
 
   .add-card:hover .add-icon { color: var(--accent2); }
 
-  /* Modal */
-  .modal-overlay {
-    display: none;
+  .toast {
     position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.7);
-    backdrop-filter: blur(4px);
-    z-index: 100;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .modal-overlay.active { display: flex; }
-
-  .modal {
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 2rem;
-    width: 90%;
-    max-width: 400px;
-  }
-
-  .modal h2 {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 1.1rem;
-    margin-bottom: 1.2rem;
-    color: var(--accent);
-  }
-
-  .modal input {
-    width: 100%;
-    padding: 0.7rem 0.9rem;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text);
-    font-family: 'Sora', sans-serif;
+    border-radius: 8px;
+    padding: 1rem 1.4rem;
     font-size: 0.85rem;
-    margin-bottom: 0.8rem;
-    outline: none;
-    transition: border-color 0.2s;
+    color: var(--text);
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 200;
+    max-width: 90%;
+    text-align: center;
+    pointer-events: none;
   }
 
-  .modal input:focus { border-color: var(--accent); }
-
-  .modal-actions {
-    display: flex;
-    gap: 0.6rem;
-    justify-content: flex-end;
-    margin-top: 0.6rem;
+  .toast.active {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
 
-  .btn {
-    padding: 0.5rem 1.2rem;
-    border: none;
-    border-radius: 6px;
-    font-family: 'Sora', sans-serif;
+  .toast code {
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
     font-size: 0.8rem;
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.15s;
   }
 
-  .btn-primary {
-    background: var(--accent2);
-    color: #000;
-  }
-
-  .btn-primary:hover { filter: brightness(1.15); }
-
-  .btn-cancel {
-    background: transparent;
+  .error-msg {
+    text-align: center;
     color: var(--muted);
-    border: 1px solid var(--border);
+    padding: 2rem;
+    font-size: 0.9rem;
   }
-
-  .btn-cancel:hover { border-color: var(--muted); }
 </style>
 </head>
 <body>
@@ -254,82 +212,58 @@
   <p>GitHub Repositories</p>
 </div>
 
-<div class="grid" id="grid"></div>
-
-<div class="modal-overlay" id="modal">
-  <div class="modal">
-    <h2>+ Add Link</h2>
-    <input type="text" id="inp-name" placeholder="Name">
-    <input type="text" id="inp-url" placeholder="https://github.com/...">
-    <input type="text" id="inp-desc" placeholder="Description (optional)">
-    <div class="modal-actions">
-      <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveLink()">Add</button>
-    </div>
-  </div>
+<div class="grid" id="grid">
+  <div class="error-msg">Loading...</div>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script>
-  const REPOS = [
-    { name: "devtools", url: "https://github.com/Franvarobot/devtools", desc: "Developer tools and scripts for Franvarobot projects", lang: "PowerShell" },
-    { name: "raknare", url: "https://github.com/Franvarobot/raknare", desc: "", lang: "HTML" },
-    { name: "subbot", url: "https://github.com/Franvarobot/subbot", desc: "", lang: "HTML" },
-    { name: "substitution", url: "https://github.com/Franvarobot/substitution", desc: "", lang: "HTML" },
-    { name: "tidsplan", url: "https://github.com/Franvarobot/tidsplan", desc: "", lang: "HTML" },
-  ];
-
-  function getCustomLinks() {
-    try { return JSON.parse(localStorage.getItem('custom-links') || '[]'); } catch { return []; }
-  }
-
-  function saveCustomLinks(links) {
-    localStorage.setItem('custom-links', JSON.stringify(links));
-  }
-
   function langClass(lang) {
     if (!lang) return 'default';
     return lang.toLowerCase().replace(/[^a-z]/g, '') || 'default';
   }
 
-  function render() {
+  function showToast(html, duration = 4000) {
+    const t = document.getElementById('toast');
+    t.innerHTML = html;
+    t.classList.add('active');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('active'), duration);
+  }
+
+  async function loadAndRender() {
     const grid = document.getElementById('grid');
+    let repos;
+
+    try {
+      const res = await fetch('links.json?' + Date.now());
+      repos = await res.json();
+    } catch (e) {
+      grid.innerHTML = '<div class="error-msg">Failed to load links.json</div>';
+      return;
+    }
+
     grid.innerHTML = '';
 
-    REPOS.forEach(r => {
+    repos.forEach(r => {
       const a = document.createElement('a');
       a.href = r.url;
       a.target = '_blank';
       a.rel = 'noopener';
       a.className = 'card';
       a.innerHTML = `
+        <button class="delete-btn" title="Remove">−</button>
         <div class="card-name">${r.name}</div>
         <div class="card-desc">${r.desc || 'No description'}</div>
         <div class="card-meta">
           ${r.lang ? `<span><span class="lang-dot ${langClass(r.lang)}"></span>${r.lang}</span>` : ''}
         </div>
       `;
-      grid.appendChild(a);
-    });
-
-    const customs = getCustomLinks();
-    customs.forEach((c, i) => {
-      const a = document.createElement('a');
-      a.href = c.url;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      a.className = 'card custom-card';
-      a.innerHTML = `
-        <button class="delete-btn" title="Remove">&times;</button>
-        <div class="card-name">${c.name}</div>
-        <div class="card-desc">${c.desc || 'No description'}</div>
-      `;
       a.querySelector('.delete-btn').addEventListener('click', e => {
         e.preventDefault();
         e.stopPropagation();
-        const links = getCustomLinks();
-        links.splice(i, 1);
-        saveCustomLinks(links);
-        render();
+        showToast(`To remove <strong>${r.name}</strong>, delete its entry from <code>links.json</code> and push.`);
       });
       grid.appendChild(a);
     });
@@ -337,43 +271,13 @@
     const add = document.createElement('div');
     add.className = 'card add-card';
     add.innerHTML = '<span class="add-icon">+</span>';
-    add.addEventListener('click', openModal);
+    add.addEventListener('click', () => {
+      showToast('To add a link, add an entry to <code>links.json</code> in your repo and push.');
+    });
     grid.appendChild(add);
   }
 
-  function openModal() {
-    document.getElementById('modal').classList.add('active');
-    document.getElementById('inp-name').focus();
-  }
-
-  function closeModal() {
-    document.getElementById('modal').classList.remove('active');
-    document.getElementById('inp-name').value = '';
-    document.getElementById('inp-url').value = '';
-    document.getElementById('inp-desc').value = '';
-  }
-
-  function saveLink() {
-    const name = document.getElementById('inp-name').value.trim();
-    const url = document.getElementById('inp-url').value.trim();
-    const desc = document.getElementById('inp-desc').value.trim();
-    if (!name || !url) return;
-    const links = getCustomLinks();
-    links.push({ name, url, desc });
-    saveCustomLinks(links);
-    closeModal();
-    render();
-  }
-
-  document.getElementById('modal').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeModal();
-  });
-
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeModal();
-  });
-
-  render();
+  loadAndRender();
 </script>
 </body>
 </html>
