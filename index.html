@@ -165,6 +165,89 @@
 
   .add-card:hover .add-icon { color: var(--accent2); }
 
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.active { display: flex; }
+
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    width: 90%;
+    max-width: 400px;
+  }
+
+  .modal h2 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem;
+    margin-bottom: 1.2rem;
+    color: var(--accent);
+  }
+
+  .modal input, .modal select {
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    font-size: 0.85rem;
+    margin-bottom: 0.8rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .modal input:focus, .modal select:focus { border-color: var(--accent); }
+
+  .modal select option { background: var(--bg); color: var(--text); }
+
+  .modal-actions {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: flex-end;
+    margin-top: 0.6rem;
+  }
+
+  .btn {
+    padding: 0.5rem 1.2rem;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Sora', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: var(--accent2);
+    color: #000;
+  }
+
+  .btn-primary:hover { filter: brightness(1.15); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-cancel {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-cancel:hover { border-color: var(--muted); }
+
+  /* Toast */
   .toast {
     position: fixed;
     bottom: 2rem;
@@ -189,13 +272,8 @@
     transform: translateX(-50%) translateY(0);
   }
 
-  .toast code {
-    background: var(--bg);
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.8rem;
-  }
+  .toast.error { border-color: #f85149; }
+  .toast.success { border-color: var(--accent2); }
 
   .error-msg {
     text-align: center;
@@ -203,6 +281,38 @@
     padding: 2rem;
     font-size: 0.9rem;
   }
+
+  /* Token bar */
+  .token-bar {
+    max-width: 1000px;
+    margin: 0 auto 1rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .token-bar button {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .token-bar button:hover { border-color: var(--accent); color: var(--text); }
+
+  .token-status {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  .token-status.connected { color: var(--accent2); }
 </style>
 </head>
 <body>
@@ -212,41 +322,186 @@
   <p>GitHub Repositories</p>
 </div>
 
+<div class="token-bar">
+  <span class="token-status" id="token-status"></span>
+  <button id="token-btn" onclick="promptToken()"></button>
+</div>
+
 <div class="grid" id="grid">
   <div class="error-msg">Loading...</div>
 </div>
 
 <div class="toast" id="toast"></div>
 
+<!-- Add modal -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <h2>+ Add Link</h2>
+    <input type="text" id="inp-name" placeholder="Name">
+    <input type="text" id="inp-url" placeholder="https://franvarobot.github.io/...">
+    <input type="text" id="inp-desc" placeholder="Description (optional)">
+    <select id="inp-lang">
+      <option value="">Language (optional)</option>
+      <option value="HTML">HTML</option>
+      <option value="JavaScript">JavaScript</option>
+      <option value="TypeScript">TypeScript</option>
+      <option value="Python">Python</option>
+      <option value="PowerShell">PowerShell</option>
+    </select>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeAddModal()">Cancel</button>
+      <button class="btn btn-primary" id="add-btn" onclick="addLink()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Token modal -->
+<div class="modal-overlay" id="token-modal">
+  <div class="modal">
+    <h2>GitHub Token</h2>
+    <input type="password" id="inp-token" placeholder="ghp_... or github_pat_...">
+    <p style="font-size:0.75rem;color:var(--muted);margin-bottom:0.8rem;">Fine-grained token scoped to <strong>Franvarobot/projects</strong> with Contents read/write. Stored in localStorage only.</p>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeTokenModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveToken()">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
+  const OWNER = 'Franvarobot';
+  const REPO = 'projects';
+  const FILE_PATH = 'links.json';
+  const API = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE_PATH}`;
+
+  let currentLinks = [];
+  let fileSha = null;
+
+  function getToken() { return localStorage.getItem('gh-token') || ''; }
+  function setToken(t) { localStorage.setItem('gh-token', t); }
+
+  function updateTokenUI() {
+    const t = getToken();
+    const status = document.getElementById('token-status');
+    const btn = document.getElementById('token-btn');
+    if (t) {
+      status.textContent = 'connected';
+      status.className = 'token-status connected';
+      btn.textContent = 'change token';
+    } else {
+      status.textContent = 'read-only';
+      status.className = 'token-status';
+      btn.textContent = 'set token';
+    }
+  }
+
+  function promptToken() {
+    document.getElementById('token-modal').classList.add('active');
+    document.getElementById('inp-token').focus();
+  }
+
+  function closeTokenModal() {
+    document.getElementById('token-modal').classList.remove('active');
+    document.getElementById('inp-token').value = '';
+  }
+
+  function saveToken() {
+    const t = document.getElementById('inp-token').value.trim();
+    if (t) setToken(t);
+    closeTokenModal();
+    updateTokenUI();
+    loadAndRender();
+  }
+
   function langClass(lang) {
     if (!lang) return 'default';
     return lang.toLowerCase().replace(/[^a-z]/g, '') || 'default';
   }
 
-  function showToast(html, duration = 4000) {
+  function showToast(msg, type = '', duration = 3000) {
     const t = document.getElementById('toast');
-    t.innerHTML = html;
-    t.classList.add('active');
+    t.textContent = msg;
+    t.className = 'toast active ' + type;
     clearTimeout(t._timer);
-    t._timer = setTimeout(() => t.classList.remove('active'), duration);
+    t._timer = setTimeout(() => t.className = 'toast', duration);
   }
 
-  async function loadAndRender() {
-    const grid = document.getElementById('grid');
-    let repos;
+  async function fetchLinks() {
+    const token = getToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    try {
-      const res = await fetch('links.json?' + Date.now());
-      repos = await res.json();
-    } catch (e) {
-      grid.innerHTML = '<div class="error-msg">Failed to load links.json</div>';
-      return;
+    // Try API first (gives us sha for writes)
+    if (token) {
+      try {
+        const res = await fetch(API, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          fileSha = data.sha;
+          const content = atob(data.content.replace(/\n/g, ''));
+          return JSON.parse(content);
+        }
+      } catch (e) {}
     }
 
+    // Fallback: fetch raw file from Pages
+    const res = await fetch('links.json?' + Date.now());
+    if (!res.ok) throw new Error('Failed to load');
+    fileSha = null;
+    return res.json();
+  }
+
+  async function writeLinks(links) {
+    const token = getToken();
+    if (!token) {
+      showToast('Set a GitHub token to save changes', 'error');
+      return false;
+    }
+
+    // Get latest sha first
+    try {
+      const res = await fetch(API, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        fileSha = data.sha;
+      }
+    } catch (e) {}
+
+    if (!fileSha) {
+      showToast('Could not get file SHA — check your token', 'error');
+      return false;
+    }
+
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(links, null, 2) + '\n')));
+    const res = await fetch(API, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: 'Update links.json',
+        content: content,
+        sha: fileSha,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      fileSha = data.content.sha;
+      return true;
+    } else {
+      const err = await res.json().catch(() => ({}));
+      showToast(err.message || 'Failed to save', 'error');
+      return false;
+    }
+  }
+
+  function render() {
+    const grid = document.getElementById('grid');
     grid.innerHTML = '';
 
-    repos.forEach(r => {
+    currentLinks.forEach((r, i) => {
       const a = document.createElement('a');
       a.href = r.url;
       a.target = '_blank';
@@ -260,10 +515,22 @@
           ${r.lang ? `<span><span class="lang-dot ${langClass(r.lang)}"></span>${r.lang}</span>` : ''}
         </div>
       `;
-      a.querySelector('.delete-btn').addEventListener('click', e => {
+      a.querySelector('.delete-btn').addEventListener('click', async e => {
         e.preventDefault();
         e.stopPropagation();
-        showToast(`To remove <strong>${r.name}</strong>, delete its entry from <code>links.json</code> and push.`);
+        if (!getToken()) {
+          showToast('Set a GitHub token to delete links', 'error');
+          return;
+        }
+        if (!confirm(`Delete "${r.name}"?`)) return;
+        currentLinks.splice(i, 1);
+        const ok = await writeLinks(currentLinks);
+        if (ok) {
+          showToast(`Deleted ${r.name}`, 'success');
+          render();
+        } else {
+          await loadAndRender();
+        }
       });
       grid.appendChild(a);
     });
@@ -272,11 +539,75 @@
     add.className = 'card add-card';
     add.innerHTML = '<span class="add-icon">+</span>';
     add.addEventListener('click', () => {
-      showToast('To add a link, add an entry to <code>links.json</code> in your repo and push.');
+      if (!getToken()) {
+        showToast('Set a GitHub token first to add links', 'error');
+        return;
+      }
+      document.getElementById('add-modal').classList.add('active');
+      document.getElementById('inp-name').focus();
     });
     grid.appendChild(add);
   }
 
+  function closeAddModal() {
+    document.getElementById('add-modal').classList.remove('active');
+    document.getElementById('inp-name').value = '';
+    document.getElementById('inp-url').value = '';
+    document.getElementById('inp-desc').value = '';
+    document.getElementById('inp-lang').value = '';
+  }
+
+  async function addLink() {
+    const name = document.getElementById('inp-name').value.trim();
+    const url = document.getElementById('inp-url').value.trim();
+    const desc = document.getElementById('inp-desc').value.trim();
+    const lang = document.getElementById('inp-lang').value;
+    if (!name || !url) return;
+
+    const btn = document.getElementById('add-btn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    const entry = { name, url };
+    if (desc) entry.desc = desc;
+    if (lang) entry.lang = lang;
+    currentLinks.push(entry);
+
+    const ok = await writeLinks(currentLinks);
+    btn.disabled = false;
+    btn.textContent = 'Add';
+
+    if (ok) {
+      showToast(`Added ${name}`, 'success');
+      closeAddModal();
+      render();
+    } else {
+      currentLinks.pop();
+    }
+  }
+
+  async function loadAndRender() {
+    const grid = document.getElementById('grid');
+    try {
+      currentLinks = await fetchLinks();
+      render();
+    } catch (e) {
+      grid.innerHTML = '<div class="error-msg">Failed to load links.json</div>';
+    }
+  }
+
+  // Modal close handlers
+  document.getElementById('add-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeAddModal();
+  });
+  document.getElementById('token-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeTokenModal();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closeAddModal(); closeTokenModal(); }
+  });
+
+  updateTokenUI();
   loadAndRender();
 </script>
 </body>
