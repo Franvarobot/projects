@@ -1,7 +1,36 @@
 [
-  { "name": "devtools", "url": "https://franvarobot.github.io/devtools/", "desc": "Developer tools and scripts for Franvarobot projects", "lang": "PowerShell" },
-  { "name": "raknare", "url": "https://franvarobot.github.io/raknare/", "desc": "", "lang": "HTML" },
-  { "name": "subbot", "url": "https://franvarobot.github.io/subbot/", "desc": "", "lang": "HTML" },
-  { "name": "substitution", "url": "https://franvarobot.github.io/substitution/", "desc": "", "lang": "HTML" },
-  { "name": "tidsplan", "url": "https://franvarobot.github.io/tidsplan/", "desc": "", "lang": "HTML" }
+  {
+    "name": "devtools",
+    "url": "https://franvarobot.github.io/devtools/",
+    "desc": "Developer tools and scripts for Franvarobot projects",
+    "lang": "PowerShell"
+  },
+  {
+    "name": "raknare",
+    "url": "https://franvarobot.github.io/raknare/",
+    "desc": "",
+    "lang": "HTML"
+  },
+  {
+    "name": "subbot",
+    "url": "https://franvarobot.github.io/subbot/",
+    "desc": "",
+    "lang": "HTML"
+  },
+  {
+    "name": "substitution",
+    "url": "https://franvarobot.github.io/substitution/",
+    "desc": "",
+    "lang": "HTML"
+  },
+  {
+    "name": "tidsplan",
+    "url": "https://franvarobot.github.io/tidsplan/",
+    "desc": "",
+    "lang": "HTML"
+  },
+  {
+    "name": "The Stage",
+    "url": "https://iesv.se/thestage/"
+  }
 ]
