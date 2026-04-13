@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Franvarobot — Repos</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Sora:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --card-hover: #1c2333;
+    --border: #30363d;
+    --accent: #58a6ff;
+    --accent2: #3fb950;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --add-border: #30363d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    min-height: 100vh;
+    padding: 3rem 1.5rem;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .header h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .header p {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    font-weight: 300;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.4rem;
+    text-decoration: none;
+    color: var(--text);
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card:hover {
+    background: var(--card-hover);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(88, 166, 255, 0.1);
+  }
+
+  .card-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .card-desc {
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-weight: 300;
+    line-height: 1.4;
+    flex-grow: 1;
+  }
+
+  .card-meta {
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .lang-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 4px;
+  }
+
+  .lang-dot.html { background: #e34c26; }
+  .lang-dot.powershell { background: #012456; }
+  .lang-dot.javascript { background: #f1e05a; }
+  .lang-dot.python { background: #3572a5; }
+  .lang-dot.typescript { background: #3178c6; }
+  .lang-dot.default { background: var(--muted); }
+
+  .custom-card {
+    position: relative;
+  }
+
+  .delete-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 1rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 2;
+  }
+
+  .custom-card:hover .delete-btn { opacity: 1; }
+  .delete-btn:hover { color: #f85149; }
+
+  /* Add card */
+  .add-card {
+    border: 2px dashed var(--add-border);
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    min-height: 120px;
+    transition: all 0.2s ease;
+  }
+
+  .add-card:hover {
+    border-color: var(--accent2);
+    background: rgba(63, 185, 80, 0.05);
+    transform: translateY(-2px);
+  }
+
+  .add-icon {
+    font-size: 2.5rem;
+    color: var(--muted);
+    font-weight: 300;
+    transition: color 0.2s;
+  }
+
+  .add-card:hover .add-icon { color: var(--accent2); }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.active { display: flex; }
+
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    width: 90%;
+    max-width: 400px;
+  }
+
+  .modal h2 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem;
+    margin-bottom: 1.2rem;
+    color: var(--accent);
+  }
+
+  .modal input {
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    font-size: 0.85rem;
+    margin-bottom: 0.8rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .modal input:focus { border-color: var(--accent); }
+
+  .modal-actions {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: flex-end;
+    margin-top: 0.6rem;
+  }
+
+  .btn {
+    padding: 0.5rem 1.2rem;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Sora', sans-serif;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: var(--accent2);
+    color: #000;
+  }
+
+  .btn-primary:hover { filter: brightness(1.15); }
+
+  .btn-cancel {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-cancel:hover { border-color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Franvarobot</h1>
+  <p>GitHub Repositories</p>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2>+ Add Link</h2>
+    <input type="text" id="inp-name" placeholder="Name">
+    <input type="text" id="inp-url" placeholder="https://github.com/...">
+    <input type="text" id="inp-desc" placeholder="Description (optional)">
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveLink()">Add</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const REPOS = [
+    { name: "devtools", url: "https://github.com/Franvarobot/devtools", desc: "Developer tools and scripts for Franvarobot projects", lang: "PowerShell" },
+    { name: "raknare", url: "https://github.com/Franvarobot/raknare", desc: "", lang: "HTML" },
+    { name: "subbot", url: "https://github.com/Franvarobot/subbot", desc: "", lang: "HTML" },
+    { name: "substitution", url: "https://github.com/Franvarobot/substitution", desc: "", lang: "HTML" },
+    { name: "tidsplan", url: "https://github.com/Franvarobot/tidsplan", desc: "", lang: "HTML" },
+  ];
+
+  function getCustomLinks() {
+    try { return JSON.parse(localStorage.getItem('custom-links') || '[]'); } catch { return []; }
+  }
+
+  function saveCustomLinks(links) {
+    localStorage.setItem('custom-links', JSON.stringify(links));
+  }
+
+  function langClass(lang) {
+    if (!lang) return 'default';
+    return lang.toLowerCase().replace(/[^a-z]/g, '') || 'default';
+  }
+
+  function render() {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+
+    REPOS.forEach(r => {
+      const a = document.createElement('a');
+      a.href = r.url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.className = 'card';
+      a.innerHTML = `
+        <div class="card-name">${r.name}</div>
+        <div class="card-desc">${r.desc || 'No description'}</div>
+        <div class="card-meta">
+          ${r.lang ? `<span><span class="lang-dot ${langClass(r.lang)}"></span>${r.lang}</span>` : ''}
+        </div>
+      `;
+      grid.appendChild(a);
+    });
+
+    const customs = getCustomLinks();
+    customs.forEach((c, i) => {
+      const a = document.createElement('a');
+      a.href = c.url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.className = 'card custom-card';
+      a.innerHTML = `
+        <button class="delete-btn" title="Remove">&times;</button>
+        <div class="card-name">${c.name}</div>
+        <div class="card-desc">${c.desc || 'No description'}</div>
+      `;
+      a.querySelector('.delete-btn').addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        const links = getCustomLinks();
+        links.splice(i, 1);
+        saveCustomLinks(links);
+        render();
+      });
+      grid.appendChild(a);
+    });
+
+    const add = document.createElement('div');
+    add.className = 'card add-card';
+    add.innerHTML = '<span class="add-icon">+</span>';
+    add.addEventListener('click', openModal);
+    grid.appendChild(add);
+  }
+
+  function openModal() {
+    document.getElementById('modal').classList.add('active');
+    document.getElementById('inp-name').focus();
+  }
+
+  function closeModal() {
+    document.getElementById('modal').classList.remove('active');
+    document.getElementById('inp-name').value = '';
+    document.getElementById('inp-url').value = '';
+    document.getElementById('inp-desc').value = '';
+  }
+
+  function saveLink() {
+    const name = document.getElementById('inp-name').value.trim();
+    const url = document.getElementById('inp-url').value.trim();
+    const desc = document.getElementById('inp-desc').value.trim();
+    if (!name || !url) return;
+    const links = getCustomLinks();
+    links.push({ name, url, desc });
+    saveCustomLinks(links);
+    closeModal();
+    render();
+  }
+
+  document.getElementById('modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeModal();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal();
+  });
+
+  render();
+</script>
+</body>
+</html>
